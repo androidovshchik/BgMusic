@@ -24,6 +24,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".MusicService" />
         <receiver
             android:name=".RebootReceiver"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import org.jetbrains.anko.UI
 import org.jetbrains.anko.frameLayout
@@ -63,10 +64,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        try {
-            webView.destroy()
-        } catch (ignored: Throwable) {
-        }
+        webView.destroy()
         super.onDestroy()
+    }
+}
+
+class WebClient : WebViewClient() {
+
+    override fun shouldOverrideUrlLoading(view: WebView, url: String?): Boolean {
+        return false
     }
 }

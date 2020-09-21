@@ -7,7 +7,7 @@ import com.google.android.exoplayer2.ExoPlayerFactory
 import com.google.android.exoplayer2.SimpleExoPlayer
 
 @Suppress("MemberVisibilityCanBePrivate")
-class SoundService : Service() {
+class MusicService : Service() {
 
     private lateinit var exoPlayer: SimpleExoPlayer
 
