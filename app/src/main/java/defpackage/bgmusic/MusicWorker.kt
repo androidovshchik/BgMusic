@@ -2,27 +2,13 @@ package defpackage.bgmusic
 
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 
 class MusicWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
-    private val preferences: Preferences by instance()
+    override suspend fun doWork(): Result {
 
-    private val server: Server by instance()
-
-    override fun doWork(): Result {
-        val header = preferences.authHeader ?: return Result.success()
-        if (!applicationContext.exitUnexpected()) {
-            try {
-                server.logout(header).execute()
-                preferences.blockingBulk {
-                    logout()
-                }
-            } catch (e: Throwable) {
-                Timber.e(e)
-            }
-        }
-        return Result.success()
     }
 
     companion object {

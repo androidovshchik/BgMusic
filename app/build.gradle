@@ -11,6 +11,7 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
+        buildConfigField("int", "MODE", "0")
     }
     buildTypes {
         release {
@@ -29,5 +30,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.work:work-runtime-ktx:2.5.0-alpha02'
     implementation 'com.google.android.exoplayer:exoplayer:2.12.0'
+    implementation 'com.google.android.exoplayer:extension-okhttp:2.12.0'
     implementation 'com.jakewharton.timber:timber:4.7.1'
 }

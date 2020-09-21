@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
                 }.lparams(matchParent, matchParent)
             }
         }.view)
+        webView.loadUrl("https://yandex.ru")
     }
 
     override fun onResume() {
