@@ -5,15 +5,14 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSourceFactory
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSourceFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
+import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
@@ -22,7 +21,6 @@ import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import org.jetbrains.anko.audioManager
 import timber.log.Timber
-import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
 private val urls = arrayOf(
@@ -33,8 +31,7 @@ private val urls = arrayOf(
 @Suppress("MemberVisibilityCanBePrivate")
 class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
-    private val reference = WeakReference(context)
-
+    private val audioManager = context.audioManager
     private var focusRequest: AudioFocusRequest? = null
     private val focusHandler = Handler()
     private val focusLock = Any()
@@ -60,6 +57,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
         player = SimpleExoPlayer.Builder(context)
             .build()
+        player.setPo
         player.repeatMode = Player.REPEAT_MODE_ALL
         val httpSourceFactory = OkHttpDataSourceFactory(
             httpClient, null, CacheControl.Builder()
@@ -74,22 +72,23 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         val cacheSourceFactory = CacheDataSource.Factory()
             .setUpstreamDataSourceFactory(httpSourceFactory)
             .setCache(cache)
-            .setFlags(CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory)
     }
 
-    fun startPlay() = reference.get()?.let {
+    fun startPlay() {
         val source = ConcatenatingMediaSource()
         source.addMediaSources(urls.map { url ->
             sourceFactory.createMediaSource(MediaItem.fromUri(url))
         })
         player.setMediaSource(source)
         player.prepare()
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
         val result = if (isOreoPlus()) {
-            it.audioManager.requestAudioFocus(focusRequest!!)
+            audioManager.requestAudioFocus(focusRequest!!)
         } else {
             @Suppress("DEPRECATION")
-            it.audioManager.requestAudioFocus(
+            audioManager.requestAudioFocus(
                 this,
                 AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN
@@ -137,13 +136,13 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    fun stopPlay() = reference.get()?.let {
+    fun stopPlay() {
         player.playWhenReady = false
         val result = if (isOreoPlus()) {
-            it.audioManager.abandonAudioFocusRequest(focusRequest!!)
+            audioManager.abandonAudioFocusRequest(focusRequest!!)
         } else {
             @Suppress("DEPRECATION")
-            it.audioManager.abandonAudioFocus(this)
+            audioManager.abandonAudioFocus(this)
         }
         Timber.d("Abandon focus: %d", result)
     }
@@ -162,4 +161,19 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
             .readTimeout(0, TimeUnit.SECONDS)
             .build()
     }
+}
+
+class CustomPolicy : DefaultLoadErrorHandlingPolicy() {
+
+    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        // Replace NoConnectivityException with the corresponding
+        // exception for the used DataSource.
+        return if (loadErrorInfo.exception is NoConnectivityException) {
+            5000 // Retry every 5 seconds.
+        } else {
+            C.TIME_UNSET // Anything else is surfaced.
+        }
+    }
+
+    override fun getMinimumLoadableRetryCount(dataType: Int) = Int.MAX_VALUE
 }
