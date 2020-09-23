@@ -25,8 +25,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     private var focusRequest: AudioFocusRequest? = null
     private val handler = Handler()
     private val focusLock = Any()
-    private var playbackDelayed = false
-    private var playbackNowAuthorized = false
+    private var isFocusDelayed = false
 
     private val player: SimpleExoPlayer
 
@@ -59,34 +58,28 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     }
 
     fun startPlay() = reference.get()?.let {
+        stopPlay()
         val item =
             MediaItem.fromUri("https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3")
         player.setMediaSource(sourceFactory.createMediaSource(item))
         player.prepare()
-        if (isOreoPlus()) {
-            val result = it.audioManager.requestAudioFocus(focusRequest!!)
-            synchronized(focusLock) {
-                playbackNowAuthorized = when (result) {
-                    AudioManager.AUDIOFOCUS_REQUEST_FAILED -> false
-                    AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                        player.playWhenReady = true
-                        true
-                    }
-                    AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
-                        playbackDelayed = true
-                        false
-                    }
-                    else -> false
-                }
-            }
+        val result = if (isOreoPlus()) {
+            it.audioManager.requestAudioFocus(focusRequest!!)
         } else {
-            val result = it.audioManager.requestAudioFocus(
+            @Suppress("DEPRECATION")
+            it.audioManager.requestAudioFocus(
                 this,
                 AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN
             )
-            if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+        }
+        Timber.d("Request focus: %d", result)
+        when (result) {
+            AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
                 player.playWhenReady = true
+            }
+            AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
+                isFocusDelayed = true
             }
         }
     }
@@ -94,9 +87,9 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     override fun onAudioFocusChange(focusChange: Int) {
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN ->
-                if (playbackDelayed || resumeOnFocusGain) {
+                if (isFocusDelayed || resumeOnFocusGain) {
                     synchronized(focusLock) {
-                        playbackDelayed = false
+                        isFocusDelayed = false
                         resumeOnFocusGain = false
                     }
                     playbackNow()
@@ -104,14 +97,14 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
             AudioManager.AUDIOFOCUS_LOSS -> {
                 synchronized(focusLock) {
                     resumeOnFocusGain = false
-                    playbackDelayed = false
+                    isFocusDelayed = false
                 }
                 pausePlayback()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 synchronized(focusLock) {
                     resumeOnFocusGain = true
-                    playbackDelayed = false
+                    isFocusDelayed = false
                 }
                 pausePlayback()
             }
@@ -121,18 +114,15 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    @Suppress("DEPRECATION")
-    fun stopPlay() = reference.get()?.run {
+    fun stopPlay() = reference.get()?.let {
         player.playWhenReady = false
-        if (audioFocusRequested) {
-            audioFocusRequested = false
-            val result = if (isOreoPlus()) {
-                audioManager.abandonAudioFocusRequest(focusRequest!!)
-            } else {
-                audioManager.abandonAudioFocus(this)
-            }
-            Timber.d("Abandon request result is %d", result)
+        val result = if (isOreoPlus()) {
+            it.audioManager.abandonAudioFocusRequest(focusRequest!!)
+        } else {
+            @Suppress("DEPRECATION")
+            it.audioManager.abandonAudioFocus(this)
         }
+        Timber.d("Abandon focus: %d", result)
     }
 
     fun release() {
