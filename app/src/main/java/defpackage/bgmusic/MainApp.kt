@@ -26,6 +26,9 @@ class MainApp : Application() {
         }
         if (isOreoPlus()) {
             notificationManager.createNotificationChannel(
+                NotificationChannel("main", "Main", NotificationManager.IMPORTANCE_DEFAULT)
+            )
+            notificationManager.createNotificationChannel(
                 NotificationChannel(
                     "service",
                     "Service",
