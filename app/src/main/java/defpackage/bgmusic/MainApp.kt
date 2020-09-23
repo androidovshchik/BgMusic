@@ -5,8 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import com.jakewharton.threetenabp.AndroidThreeTen
 import defpackage.bgmusic.extension.isOreoPlus
+import defpackage.bgmusic.extension.startForegroundService
 import org.jetbrains.anko.notificationManager
-import org.jetbrains.anko.startService
 import timber.log.Timber
 
 enum class Mode(val id: Int) {
@@ -25,13 +25,13 @@ class MainApp : Application() {
         }
         if (isOreoPlus()) {
             notificationManager.createNotificationChannel(
-                NotificationChannel("service", "Default", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel("service", "Service", NotificationManager.IMPORTANCE_LOW)
             )
         }
         AndroidThreeTen.init(this)
         when (BuildConfig.MODE) {
             Mode.SERVICE.id -> {
-                startService<MusicService>()
+                startForegroundService<MusicService>()
             }
             Mode.WORKER_ONE_TIME.id -> {
             }
