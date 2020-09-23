@@ -5,14 +5,16 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
-import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSourceFactory
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSourceFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
-import com.google.android.exoplayer2.upstream.LoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
@@ -21,6 +23,7 @@ import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import org.jetbrains.anko.audioManager
 import timber.log.Timber
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 private val urls = arrayOf(
@@ -34,9 +37,9 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     private val audioManager = context.audioManager
     private var focusRequest: AudioFocusRequest? = null
     private val focusHandler = Handler()
-    private val focusLock = Any()
-    private var isFocusDelayed = false
-    private var resumeOnFocusGain = false
+
+    @Volatile
+    private var hasDelayedFocus = false
 
     private val player: ExoPlayer
 
@@ -56,23 +59,24 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
                 .build()
         }
         player = SimpleExoPlayer.Builder(context)
+            .build().apply {
+                repeatMode = Player.REPEAT_MODE_ALL
+            }
+        val control = CacheControl.Builder()
+            .maxAge(Integer.MAX_VALUE, TimeUnit.SECONDS)
             .build()
-        player.setPo
-        player.repeatMode = Player.REPEAT_MODE_ALL
-        val httpSourceFactory = OkHttpDataSourceFactory(
-            httpClient, null, CacheControl.Builder()
-                .maxAge(Integer.MAX_VALUE, TimeUnit.SECONDS)
-                .build()
-        )
+        val httpSourceFactory = OkHttpDataSourceFactory(httpClient, null, control)
         val cache = SimpleCache(
-            context.cacheDir,
+            File(context.cacheDir, "exoplayer").apply { mkdirs() },
             LeastRecentlyUsedCacheEvictor(100 * 1024 * 1024),
             ExoDatabaseProvider(context)
         )
         val cacheSourceFactory = CacheDataSource.Factory()
             .setUpstreamDataSourceFactory(httpSourceFactory)
             .setCache(cache)
-        sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory)
+        sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory).apply {
+            setLoadErrorHandlingPolicy(CustomPolicy())
+        }
     }
 
     fun startPlay() {
@@ -100,7 +104,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
                 player.playWhenReady = true
             }
             AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
-                isFocusDelayed = true
+                hasDelayedFocus = true
             }
         }
     }
@@ -109,25 +113,16 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         Timber.d("Changed focus: %d", focusChange)
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN ->
-                if (isFocusDelayed || resumeOnFocusGain) {
-                    synchronized(focusLock) {
-                        isFocusDelayed = false
-                        resumeOnFocusGain = false
-                    }
+                if (hasDelayedFocus) {
+                    hasDelayedFocus = false
                     player.playWhenReady = true
                 }
             AudioManager.AUDIOFOCUS_LOSS -> {
-                synchronized(focusLock) {
-                    resumeOnFocusGain = false
-                    isFocusDelayed = false
-                }
+                hasDelayedFocus = false
                 player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                synchronized(focusLock) {
-                    resumeOnFocusGain = true
-                    isFocusDelayed = false
-                }
+                hasDelayedFocus = true
                 player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
@@ -164,16 +159,6 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 }
 
 class CustomPolicy : DefaultLoadErrorHandlingPolicy() {
-
-    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-        // Replace NoConnectivityException with the corresponding
-        // exception for the used DataSource.
-        return if (loadErrorInfo.exception is NoConnectivityException) {
-            5000 // Retry every 5 seconds.
-        } else {
-            C.TIME_UNSET // Anything else is surfaced.
-        }
-    }
 
     override fun getMinimumLoadableRetryCount(dataType: Int) = Int.MAX_VALUE
 }
