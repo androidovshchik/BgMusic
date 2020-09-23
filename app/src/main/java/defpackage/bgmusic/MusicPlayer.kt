@@ -38,9 +38,6 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     private var focusRequest: AudioFocusRequest? = null
     private val focusHandler = Handler()
 
-    @Volatile
-    private var hasDelayedFocus = false
-
     private val player: ExoPlayer
 
     private val sourceFactory: MediaSourceFactory
@@ -99,30 +96,18 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
             )
         }
         Timber.d("Request focus: %d", result)
-        when (result) {
-            AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                player.playWhenReady = true
-            }
-            AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
-                hasDelayedFocus = true
-            }
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            player.playWhenReady = true
         }
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
         Timber.d("Changed focus: %d", focusChange)
         when (focusChange) {
-            AudioManager.AUDIOFOCUS_GAIN ->
-                if (hasDelayedFocus) {
-                    hasDelayedFocus = false
-                    player.playWhenReady = true
-                }
-            AudioManager.AUDIOFOCUS_LOSS -> {
-                hasDelayedFocus = false
-                player.playWhenReady = false
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                player.playWhenReady = true
             }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                hasDelayedFocus = true
+            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
