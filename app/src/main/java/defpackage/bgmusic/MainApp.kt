@@ -1,6 +1,7 @@
 package defpackage.bgmusic
 
 import android.app.Application
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import com.jakewharton.threetenabp.AndroidThreeTen
@@ -25,7 +26,13 @@ class MainApp : Application() {
         }
         if (isOreoPlus()) {
             notificationManager.createNotificationChannel(
-                NotificationChannel("service", "Service", NotificationManager.IMPORTANCE_LOW)
+                NotificationChannel(
+                    "service",
+                    "Service",
+                    NotificationManager.IMPORTANCE_NONE
+                ).apply {
+                    lockscreenVisibility = Notification.VISIBILITY_SECRET
+                }
             )
         }
         AndroidThreeTen.init(this)

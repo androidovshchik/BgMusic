@@ -1,10 +1,12 @@
 package defpackage.bgmusic
 
+import android.app.Notification
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import defpackage.bgmusic.extension.isOreoPlus
 
 @Suppress("MemberVisibilityCanBePrivate")
 class MusicService : Service() {
@@ -15,13 +17,19 @@ class MusicService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(
-            Int.MAX_VALUE, NotificationCompat.Builder(applicationContext, "service")
-                .setSmallIcon(R.drawable.icon)
-                .setContent(RemoteViews(packageName, R.layout.notification))
-                .setSound(null)
-                .build()
-        )
+        if (isOreoPlus()) {
+            startForeground(
+                1, NotificationCompat.Builder(applicationContext, "service")
+                    .setSmallIcon(R.drawable.icon)
+                    .setContent(RemoteViews(packageName, R.layout.notification))
+                    .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+                    .setPriority(NotificationCompat.PRIORITY_MIN)
+                    .setSound(null)
+                    .build()
+            )
+        } else {
+            startForeground(1, Notification())
+        }
         player.startPlay()
     }
 
