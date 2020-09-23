@@ -22,6 +22,7 @@ import timber.log.Timber
 import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
+@Suppress("MemberVisibilityCanBePrivate")
 class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
     private val reference = WeakReference(context)
@@ -109,14 +110,14 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
                     resumeOnFocusGain = false
                     isFocusDelayed = false
                 }
-                stopPlay()
+                player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 synchronized(focusLock) {
                     resumeOnFocusGain = true
                     isFocusDelayed = false
                 }
-                stopPlay()
+                player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 // ... pausing or ducking depends on your app

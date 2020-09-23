@@ -56,5 +56,6 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.5.0-alpha02'
     implementation 'com.google.android.exoplayer:exoplayer:2.12.0'
     implementation 'com.google.android.exoplayer:extension-okhttp:2.12.0'
+    implementation 'com.jakewharton.threetenabp:threetenabp:1.2.2'
     implementation 'com.jakewharton.timber:timber:4.7.1'
 }
