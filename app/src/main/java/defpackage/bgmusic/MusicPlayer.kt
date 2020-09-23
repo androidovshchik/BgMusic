@@ -5,10 +5,13 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSourceFactory
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSourceFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
@@ -22,6 +25,11 @@ import timber.log.Timber
 import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
+private val urls = arrayOf(
+    "https://www.oum.ru/upload/audio/52f/52f961351291b176bca19019a6b3399f.mp3",
+    "https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3"
+)
+
 @Suppress("MemberVisibilityCanBePrivate")
 class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
@@ -33,7 +41,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     private var isFocusDelayed = false
     private var resumeOnFocusGain = false
 
-    private val player: SimpleExoPlayer
+    private val player: ExoPlayer
 
     private val sourceFactory: MediaSourceFactory
 
@@ -52,6 +60,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
         player = SimpleExoPlayer.Builder(context)
             .build()
+        player.repeatMode = Player.REPEAT_MODE_ALL
         val httpSourceFactory = OkHttpDataSourceFactory(
             httpClient, null, CacheControl.Builder()
                 .maxAge(Integer.MAX_VALUE, TimeUnit.SECONDS)
@@ -70,9 +79,11 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     }
 
     fun startPlay() = reference.get()?.let {
-        val item =
-            MediaItem.fromUri("https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3")
-        player.setMediaSource(sourceFactory.createMediaSource(item))
+        val source = ConcatenatingMediaSource()
+        source.addMediaSources(urls.map { url ->
+            sourceFactory.createMediaSource(MediaItem.fromUri(url))
+        })
+        player.setMediaSource(source)
         player.prepare()
         val result = if (isOreoPlus()) {
             it.audioManager.requestAudioFocus(focusRequest!!)
@@ -96,6 +107,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
+        Timber.d("Changed focus: %d", focusChange)
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN ->
                 if (isFocusDelayed || resumeOnFocusGain) {
