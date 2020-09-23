@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
+import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSourceFactory
 import com.google.android.exoplayer2.source.MediaSourceFactory
@@ -27,9 +28,9 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     private var playbackDelayed = false
     private var playbackNowAuthorized = false
 
-    private val exoPlayer: SimpleExoPlayer
+    private val player: SimpleExoPlayer
 
-    private val mediaSourceFactory: MediaSourceFactory
+    private val sourceFactory: MediaSourceFactory
 
     init {
         if (isOreoPlus()) {
@@ -44,7 +45,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
                 .setOnAudioFocusChangeListener(this, handler)
                 .build()
         }
-        exoPlayer = SimpleExoPlayer.Builder(context)
+        player = SimpleExoPlayer.Builder(context)
             .build()
         val httpDataSourceFactory = OkHttpDataSourceFactory(getClient(), null, null)
         val cache = SimpleCache(context.cacheDir, LeastRecentlyUsedCacheEvictor(1024 * 1024 * 100))
@@ -54,18 +55,21 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         cache, httpDataSourceFactory,
         CacheDataSource.FLAG_BLOCK_ON_CACHE or CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR
         )
-        mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
+        sourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
     }
 
-    @Suppress("DEPRECATION")
-    fun startPlay() = reference.get()?.run {
+    fun startPlay() = reference.get()?.let {
+        val item =
+            MediaItem.fromUri("https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3")
+        player.setMediaSource(sourceFactory.createMediaSource(item))
+        player.prepare()
         if (isOreoPlus()) {
-            val res = audioManager.requestAudioFocus(focusRequest)
+            val result = it.audioManager.requestAudioFocus(focusRequest!!)
             synchronized(focusLock) {
-                playbackNowAuthorized = when (res) {
+                playbackNowAuthorized = when (result) {
                     AudioManager.AUDIOFOCUS_REQUEST_FAILED -> false
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                        playbackNow()
+                        player.playWhenReady = true
                         true
                     }
                     AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
@@ -76,20 +80,14 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
                 }
             }
         } else {
-            val result: Int = audioManager.requestAudioFocus(
-                afChangeListener,
-                // Use the music stream.
+            val result = it.audioManager.requestAudioFocus(
+                this,
                 AudioManager.STREAM_MUSIC,
-                // Request permanent focus.
                 AudioManager.AUDIOFOCUS_GAIN
             )
-
             if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                // Start playback
+                player.playWhenReady = true
             }
-        }
-        exoPlayer.apply {
-            playWhenReady = true
         }
     }
 
@@ -125,7 +123,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
     @Suppress("DEPRECATION")
     fun stopPlay() = reference.get()?.run {
-        exoPlayer.playWhenReady = false
+        player.playWhenReady = false
         if (audioFocusRequested) {
             audioFocusRequested = false
             val result = if (isOreoPlus()) {
@@ -139,7 +137,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
     fun release() {
         stopPlay()
-        exoPlayer.stop()
-        exoPlayer.release()
+        player.stop()
+        player.release()
     }
 }
