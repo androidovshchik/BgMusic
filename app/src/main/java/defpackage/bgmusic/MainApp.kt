@@ -1,9 +1,9 @@
 package defpackage.bgmusic
 
 import android.app.Application
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import androidx.core.app.NotificationCompat
 import com.jakewharton.threetenabp.AndroidThreeTen
 import defpackage.bgmusic.extension.isOreoPlus
 import defpackage.bgmusic.extension.startForegroundService
@@ -31,7 +31,8 @@ class MainApp : Application() {
                     "Service",
                     NotificationManager.IMPORTANCE_NONE
                 ).apply {
-                    lockscreenVisibility = Notification.VISIBILITY_SECRET
+                    lockscreenVisibility = NotificationCompat.VISIBILITY_SECRET
+                    setSound(null, null)
                 }
             )
         }

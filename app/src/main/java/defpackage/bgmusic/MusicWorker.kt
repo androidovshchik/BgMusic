@@ -2,7 +2,6 @@ package defpackage.bgmusic
 
 import android.content.Context
 import androidx.work.*
-import java.util.concurrent.TimeUnit
 
 class MusicWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
@@ -16,7 +15,6 @@ class MusicWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
 
         fun launch(context: Context) {
             val request = OneTimeWorkRequestBuilder<MusicWorker>()
-                .setInitialDelay(0, TimeUnit.MILLISECONDS)
                 .build()
             WorkManager.getInstance(context).apply {
                 enqueueUniqueWork(NAME, ExistingWorkPolicy.REPLACE, request)
