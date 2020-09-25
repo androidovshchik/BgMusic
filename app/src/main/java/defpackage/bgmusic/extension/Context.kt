@@ -11,6 +11,8 @@ import org.jetbrains.anko.alarmManager
 import org.jetbrains.anko.intentFor
 import org.jetbrains.anko.startService
 
+inline fun <reified T> Context.getComponent() = ComponentName(applicationContext, T::class.java)
+
 inline fun <reified T> Context.activityCallback(action: T.() -> Unit) {
     getActivity()?.let {
         if (it is T && !it.isFinishing) {
