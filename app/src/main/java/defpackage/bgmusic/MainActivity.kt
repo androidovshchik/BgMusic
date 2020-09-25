@@ -2,7 +2,6 @@ package defpackage.bgmusic
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -12,7 +11,9 @@ import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import defpackage.bgmusic.extension.isLollipopMR1Plus
+import androidx.core.app.NotificationManagerCompat
+import defpackage.bgmusic.extension.getComponent
+import defpackage.bgmusic.extension.isRPlus
 import org.jetbrains.anko.UI
 import org.jetbrains.anko.frameLayout
 import org.jetbrains.anko.matchParent
@@ -45,26 +46,29 @@ class MainActivity : AppCompatActivity() {
             }
         }.view)
         webView.loadUrl("https://yandex.ru")
-        requirePermission()
     }
 
     override fun onStart() {
         super.onStart()
-        if (isLollipopMR1Plus()) {
-            requirePermission()
-        }
+        requestPermission()
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP_MR1)
-    private fun requirePermission() {
-        if (!isNotificationServiceEnabled()) {
-            try {
-                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                if (intent.resolveActivity(packageManager) != null) {
-                    startActivity(intent)
-                }
-            } catch (ignored: Throwable) {
-                // api level < 22
+    private fun requestPermission() {
+        val listeners = NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
+        if (!listeners.contains(packageName)) {
+            val name = getComponent<NotificationService>().flattenToString()
+            if (isRPlus()) {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, name)
+                })
+            } else {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                    putExtra(EXTRA_FRAGMENT_ARG_KEY, name)
+                    putExtra(EXTRA_SHOW_FRAGMENT_ARGUMENTS, Bundle().also {
+                        it.putString(EXTRA_FRAGMENT_ARG_KEY, name)
+                    })
+                })
             }
         }
     }
@@ -92,22 +96,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isNotificationServiceEnabled(): Boolean {
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        if (!flat.isNullOrBlank()) {
-            flat.split(":").forEach {
-                val component = ComponentName.unflattenFromString(it)
-                if (packageName == component?.packageName) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    // see https://android.googlesource.com/platform/packages/apps/Settings/+/master/src/com/android/settings/SettingsActivity.java
+    companion object {
+
+        private const val EXTRA_SHOW_FRAGMENT_ARGUMENTS = ":settings:show_fragment_args"
+
+        private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
     }
 }
 
