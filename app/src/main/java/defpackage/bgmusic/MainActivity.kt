@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import defpackage.bgmusic.extension.getComponent
 import defpackage.bgmusic.extension.isRPlus
+import defpackage.bgmusic.service.NotificationService
 import org.jetbrains.anko.UI
 import org.jetbrains.anko.frameLayout
 import org.jetbrains.anko.matchParent
