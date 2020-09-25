@@ -43,7 +43,7 @@
             </intent-filter>
         </receiver>
 
-        <service android:name=".MusicService" />
+        <service android:name=".player.MusicService" />
         <service
             android:name=".FCMService"
             android:exported="false">
