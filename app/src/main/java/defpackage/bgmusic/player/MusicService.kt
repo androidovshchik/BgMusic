@@ -1,15 +1,20 @@
-package defpackage.bgmusic
+package defpackage.bgmusic.player
 
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.observeForeverFreshly
+import androidx.lifecycle.removeFreshObserver
+import defpackage.bgmusic.R
+import defpackage.bgmusic.playbackChanges
 import kotlinx.coroutines.*
 import timber.log.Timber
 
 @Suppress("MemberVisibilityCanBePrivate")
-class MusicService : Service(), CoroutineScope {
+class MusicService : Service(), CoroutineScope, Observer<Boolean> {
 
     private val job = SupervisorJob()
 
@@ -29,6 +34,7 @@ class MusicService : Service(), CoroutineScope {
                 .build()
         )
         player.startPlay()
+        playbackChanges.observeForeverFreshly(this)
         launch {
             while (true) {
                 delay(5_000)
@@ -41,7 +47,14 @@ class MusicService : Service(), CoroutineScope {
         return START_STICKY
     }
 
+    override fun onChanged(t: Boolean) {
+        if (t) {
+            player.startPlay()
+        }
+    }
+
     override fun onDestroy() {
+        playbackChanges.removeFreshObserver(this)
         job.cancelChildren()
         player.release()
         super.onDestroy()

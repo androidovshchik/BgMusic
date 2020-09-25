@@ -1,4 +1,4 @@
-package defpackage.bgmusic
+package defpackage.bgmusic.player
 
 import android.content.Context
 import androidx.work.*

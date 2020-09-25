@@ -1,4 +1,4 @@
-package defpackage.bgmusic
+package defpackage.bgmusic.service
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver

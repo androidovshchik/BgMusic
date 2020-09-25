@@ -1,10 +1,12 @@
-package defpackage.bgmusic
+package defpackage.bgmusic.service
 
 import android.annotation.SuppressLint
 import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import defpackage.bgmusic.MainActivity
+import defpackage.bgmusic.R
 import defpackage.bgmusic.extension.pendingActivityFor
 import org.jetbrains.anko.notificationManager
 
