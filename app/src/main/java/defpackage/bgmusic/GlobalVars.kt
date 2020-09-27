@@ -5,8 +5,9 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 val urls = arrayOf(
-    "https://www.oum.ru/upload/audio/52f/52f961351291b176bca19019a6b3399f.mp3",
-    "https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3"
+    "https://cdn6.sefon.pro/files/prev/1/Юрий Никулин - А Нам Все Равно (192kbps).mp3",
+    "https://cdn3.sefon.pro/files/prev/177/Юрий Никулин - Постой, паровоз! (192kbps).mp3",
+    "https://cdn6.sefon.pro/files/prev/177/Юрий Никулин - Если б я был султан (192kbps).mp3"
 )
 
 val playbackChanges = MutableLiveData<Boolean>()

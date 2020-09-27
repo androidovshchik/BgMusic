@@ -14,6 +14,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
+import com.chibatching.kotpref.bulk
 import defpackage.bgmusic.Preferences
 import defpackage.bgmusic.R
 import defpackage.bgmusic.extension.cancelAlarm
@@ -62,12 +63,11 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
         return START_STICKY
     }
 
-    override fun saveTrack(i: Int) {
-        preferences.track = i
-    }
-
-    override fun saveProgress(value: Int) {
-        preferences.progress = value
+    override fun savePosition(i: Int) {
+        preferences.bulk {
+            track = i
+            progress = player.progress
+        }
     }
 
     override fun setAlarmIfNeeded() {
@@ -94,6 +94,7 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
     }
 
     override fun onDestroy() {
+        preferences.progress = player.progress
         playbackChanges.removeFreshObserver(this)
         job.cancelChildren()
         player.release()

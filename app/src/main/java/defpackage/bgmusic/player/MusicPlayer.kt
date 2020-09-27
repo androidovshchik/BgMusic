@@ -34,9 +34,7 @@ import java.util.concurrent.TimeUnit
 
 interface IHolder {
 
-    fun saveTrack(i: Int)
-
-    fun saveProgress(value: Int)
+    fun savePosition(i: Int)
 
     fun setAlarmIfNeeded()
 
@@ -45,13 +43,15 @@ interface IHolder {
 
 interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListener {
 
+    val progress: Long
+
     fun startPlay()
 
     fun resumePlay()
 
     fun setMaxVolume()
 
-    fun preparePlaylist(track: Int, progress: Int)
+    fun preparePlaylist(track: Int, progress: Long)
 
     fun pausePlay()
 
@@ -82,11 +82,15 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
             .build()
     }
 
-    private val player = SimpleExoPlayer.Builder(context).build()
+    private val player = SimpleExoPlayer.Builder(context)
+        .build()
 
     private val sourceFactory: MediaSourceFactory
 
     private val source = ConcatenatingMediaSource()
+
+    override val progress: Long
+        get() = player.currentPosition
 
     init {
         val control = CacheControl.Builder()
@@ -101,9 +105,8 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         val cacheSourceFactory = CacheDataSource.Factory()
             .setUpstreamDataSourceFactory(httpSourceFactory)
             .setCache(cache)
-        sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory).apply {
-            setLoadErrorHandlingPolicy(CustomPolicy())
-        }
+        sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory)
+            .setLoadErrorHandlingPolicy(CustomPolicy())
         player.repeatMode = Player.REPEAT_MODE_ALL
         player.addListener(this)
     }
@@ -139,17 +142,18 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
-            if (BuildConfig.DEBUG) maxVolume / 4 else maxVolume,
+            if (BuildConfig.DEBUG) maxVolume / 2 else maxVolume,
             0
         )
     }
 
-    override fun preparePlaylist(track: Int, progress: Int) {
+    override fun preparePlaylist(track: Int, progress: Long) {
         source.clear()
         urls.forEach {
             source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
         }
         player.setMediaSource(source)
+        player.seekTo(track, progress)
         player.prepare()
     }
 
@@ -176,16 +180,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         trackGroups: TrackGroupArray,
         trackSelections: TrackSelectionArray
     ) {
-        Timber.e("onTracksChanged ${player.currentWindowIndex}")
-        holder.get()?.saveTrack(player.currentWindowIndex)
-    }
-
-    override fun onPositionDiscontinuity(reason: Int) {
-        Timber.e("onPositionDiscontinuity $reason")
-    }
-
-    override fun onSeekProcessed() {
-        super.onSeekProcessed()
+        holder.get()?.savePosition(player.currentWindowIndex)
     }
 
     override fun pausePlay() {
