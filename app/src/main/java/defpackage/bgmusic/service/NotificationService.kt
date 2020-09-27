@@ -3,9 +3,10 @@ package defpackage.bgmusic.service
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.text.TextUtils
+import defpackage.bgmusic.BuildConfig
 import timber.log.Timber
 import java.util.*
 
@@ -14,7 +15,10 @@ class NotificationService : NotificationListenerService() {
     private var has = false
 
     override fun onNotificationPosted(notification: StatusBarNotification) {
-        logNotification(notification)
+        if (BuildConfig.DEBUG) {
+            logNotification(notification)
+        }
+        Timber.e("is ui ${Looper.myLooper() == Looper.getMainLooper()}")
         notification.notification.extras.getParcelable<MediaSession.Token>("android.mediaSession")
             ?.let {
                 val mediaController = MediaController(applicationContext, it)
@@ -30,30 +34,33 @@ class NotificationService : NotificationListenerService() {
             }
     }
 
-    override fun onNotificationRemoved(notification: StatusBarNotification) {}
+    override fun onNotificationRemoved(notification: StatusBarNotification) {
+        Timber.e("R is ui ${Looper.myLooper() == Looper.getMainLooper()}")
+    }
 
     private fun logNotification(notification: StatusBarNotification) {
-        val classname = javaClass.simpleName
-        BeautyCat.logDivider(classname, ":")
-        BeautyCat.logCentered(" ", classname, "New notification")
-        BeautyCat.logCentered(":", classname, "packageName: " + notification.packageName)
-        BeautyCat.logCentered(":", classname, "id: " + notification.id)
-        if (notification.notification.actions != null) {
-            BeautyCat.logCentered(" ", classname, "Notification actions")
-            for (action in notification.notification.actions) {
-                BeautyCat.logCentered(":", classname, "action.title: " + action.title)
+        BeautyCat.logDivider(tag, ":")
+        BeautyCat.logCentered(" ", tag, "New notification")
+        BeautyCat.logCentered(":", tag, "id: " + notification.id)
+        BeautyCat.logCentered(":", tag, "packageName: " + notification.packageName)
+        notification.notification.actions?.let {
+            BeautyCat.logCentered(" ", tag, "Notification actions")
+            for (action in it) {
+                BeautyCat.logCentered(":", tag, "action.title: " + action.title)
             }
         }
-        if (notification.notification.extras != null) {
-            BeautyCat.logCentered(" ", classname, "Notification extras")
-            for (key in notification.notification.extras.keySet()) {
-                Timber.d("$key: ${notification.notification.extras[key]}")
+        notification.notification.extras?.let {
+            BeautyCat.logCentered(" ", tag, "Notification extras")
+            for (key in it.keySet()) {
+                Timber.d("$key: ${it[key]}")
             }
         }
-        notification.notification.extras.get("android.compactActions")?.let {
-            Timber.e("compactActions ${it.javaClass.name}")
-        }
-        BeautyCat.logDivider(classname, ":")
+        BeautyCat.logDivider(tag, ":")
+    }
+
+    companion object {
+
+        private val tag = NotificationService::class.java.simpleName
     }
 }
 
@@ -70,8 +77,8 @@ object BeautyCat {
         if (length >= STYLED_LOG_LENGTH) {
             log(tag, "$character%s${text.substring(0, STYLED_LOG_LENGTH - 5)}%s...$character")
         } else {
-            val text = "$character%s$text%s${if (length % 2 == 0) "" else " "}$character"
-            log(tag, text, repeat(" ", (STYLED_LOG_LENGTH - length) / 2))
+            val log = "$character%s$text%s${if (length % 2 == 0) "" else " "}$character"
+            log(tag, log, repeat(" ", (STYLED_LOG_LENGTH - length) / 2))
         }
     }
 
@@ -84,6 +91,6 @@ object BeautyCat {
     }
 
     private fun repeat(what: String, times: Int): String {
-        return TextUtils.join(", ", Collections.nCopies(times, what))
+        return Collections.nCopies(times, what).joinToString(", ")
     }
 }
