@@ -1,14 +1,11 @@
 package defpackage.bgmusic.player
 
 import android.annotation.SuppressLint
-import android.app.AlarmManager
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
-import android.os.SystemClock
-import androidx.core.app.AlarmManagerCompat
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -29,36 +26,40 @@ import defpackage.bgmusic.extension.isOreoPlus
 import defpackage.bgmusic.httpClient
 import defpackage.bgmusic.urls
 import okhttp3.CacheControl
-import org.jetbrains.anko.alarmManager
 import org.jetbrains.anko.audioManager
 import timber.log.Timber
 import java.io.File
+import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
-interface IPlayer : Player.EventListener {
+interface IHolder {
 
-    fun setMaxVolume()
+    fun setAlarmIfNeeded()
+}
 
-    fun setPlaylist()
+interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListener {
 
     fun startPlay()
 
     fun resumePlay()
 
+    fun setMaxVolume()
+
+    fun setPlaylist()
+
     fun pausePlay()
 
     fun stopPlay()
-
-    fun deferPlay()
 
     fun release()
 }
 
 @SuppressLint("NewApi")
-class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeListener {
+class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
+
+    private val holder = WeakReference(holder)
 
     private val audioManager = context.audioManager
-    private val alarmManager = context.alarmManager
 
     @Suppress("DEPRECATION")
     private val focusHandler = Handler()
@@ -95,28 +96,8 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory).apply {
             setLoadErrorHandlingPolicy(CustomPolicy())
         }
-        player.apply {
-            repeatMode = Player.REPEAT_MODE_ALL
-            addListener()
-        }
-    }
-
-    override fun setMaxVolume() {
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        audioManager.setStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            if (BuildConfig.DEBUG) maxVolume / 4 else maxVolume,
-            0
-        )
-    }
-
-    override fun setPlaylist() {
-        val source = ConcatenatingMediaSource()
-        source.addMediaSources(urls.map { url ->
-            sourceFactory.createMediaSource(MediaItem.fromUri(url))
-        })
-        player.setMediaSource(source)
-        player.prepare()
+        player.repeatMode = Player.REPEAT_MODE_ALL
+        player.addListener(this)
     }
 
     override fun startPlay() {
@@ -145,11 +126,22 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         player.playWhenReady = true
     }
 
-    override fun onTracksChanged(
-        trackGroups: TrackGroupArray,
-        trackSelections: TrackSelectionArray
-    ) {
-        super.onTracksChanged(trackGroups, trackSelections)
+    override fun setMaxVolume() {
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            if (BuildConfig.DEBUG) maxVolume / 4 else maxVolume,
+            0
+        )
+    }
+
+    override fun setPlaylist() {
+        val source = ConcatenatingMediaSource()
+        source.addMediaSources(urls.map { url ->
+            sourceFactory.createMediaSource(MediaItem.fromUri(url))
+        })
+        player.setMediaSource(source)
+        player.prepare()
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
@@ -160,6 +152,7 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
                 stopPlay()
+                holder.get()?.setAlarmIfNeeded()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 pausePlay()
@@ -168,6 +161,13 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
                 // ... pausing or ducking depends on your app
             }
         }
+    }
+
+    override fun onTracksChanged(
+        trackGroups: TrackGroupArray,
+        trackSelections: TrackSelectionArray
+    ) {
+        Timber.e("onTracksChanged")
     }
 
     override fun pausePlay() {
@@ -183,18 +183,6 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
             audioManager.abandonAudioFocus(this)
         }
         Timber.d("Abandon focus: %d", result)
-    }
-
-    override fun deferPlay() {
-        val delay = TimeUnit.MINUTES.toMillis(10)
-        AlarmManagerCompat.setExactAndAllowWhileIdle(
-            alarmManager,
-            AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + delay,
-            pendingReceiverFor(intentFor<WidgetClock>().also {
-                it.action = "$packageName.ALARM"
-            })
-        )
     }
 
     override fun release() {
