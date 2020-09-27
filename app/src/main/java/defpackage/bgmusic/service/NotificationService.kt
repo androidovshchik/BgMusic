@@ -3,6 +3,7 @@ package defpackage.bgmusic.service
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Bundle
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -41,21 +42,16 @@ class NotificationService : NotificationListenerService() {
     private fun logNotification(notification: StatusBarNotification) {
         val char = chars[chars.indices.random()]
         BeautyCat.div(tag, char)
-        BeautyCat.log(tag, " ", "New notification")
-        BeautyCat.log(tag, char, "id: " + notification.id)
-        BeautyCat.log(tag, char, "packageName: " + notification.packageName)
+        BeautyCat.log(tag, "New notification")
+        BeautyCat.log(tag, "id: ${notification.id}", char)
+        BeautyCat.log(tag, "packageName: ${notification.packageName}", char)
         notification.notification.actions?.let {
-            BeautyCat.log(tag, " ", "Notification actions")
+            BeautyCat.log(tag, "Notification actions")
             for (action in it) {
-                BeautyCat.log(tag, char, "action.title: ${action.title}")
+                BeautyCat.log(tag, "action.title: ${action.title}", char)
             }
         }
-        notification.notification.extras?.let {
-            BeautyCat.log(tag, " ", "Notification extras")
-            for (key in it.keySet()) {
-                BeautyCat.log(tag, char, "$key: ${it[key]}")
-            }
-        }
+        BeautyCat.bun(tag, notification.notification.extras, char)
         BeautyCat.div(tag, char)
     }
 
@@ -75,22 +71,24 @@ object BeautyCat {
         return Timber.tag(tag)
     }
 
-    fun log(tag: String, character: String, text: String) {
+    fun log(tag: String, text: String, char: String = " ") {
         val length = text.length + 2
         if (length >= STYLED_LOG_LENGTH) {
-            print(tag, "$character%s${text.substring(0, STYLED_LOG_LENGTH - 5)}%s...$character")
+            print(tag, "$char%s${text.substring(0, STYLED_LOG_LENGTH - 5)}%s...$char")
         } else {
-            val log = "$character%s$text%s${if (length % 2 == 0) "" else " "}$character"
+            val log = "$char%s$text%s${if (length % 2 == 0) "" else " "}$char"
             print(tag, log, repeat(" ", (STYLED_LOG_LENGTH - length) / 2))
         }
     }
 
-    fun extra() {
-
+    fun bun(tag: String, extras: Bundle?, char: String) {
+        for (key in extras?.keySet() ?: return) {
+            log(tag, "$key: ${extras[key]}", char)
+        }
     }
 
-    fun div(tag: String, character: String) {
-        tag(tag).i(repeat(character, STYLED_LOG_LENGTH))
+    fun div(tag: String, char: String) {
+        tag(tag).i(repeat(char, STYLED_LOG_LENGTH))
     }
 
     private fun print(tag: String, text: String, edge: String = "") {
