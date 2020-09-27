@@ -89,6 +89,8 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
 
     private val source = ConcatenatingMediaSource()
 
+    private var isReady = false
+
     override val position: Long
         get() = player.currentPosition
 
@@ -112,10 +114,11 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
     }
 
     override fun startPlay() {
-        if (player.playWhenReady) {
+        if (isReady) {
             Timber.w("Skipping start playing")
             return
         }
+        isReady = true
         holder.get()?.cancelAlarm()
         val result = if (isOreoPlus()) {
             audioManager.requestAudioFocus(focusRequest)
@@ -148,12 +151,12 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
     }
 
     override fun preparePlaylist(track: Int, progress: Long) {
-        Timber.d("Preparing track=$track progress=$progress")
         source.clear()
         urls.forEach {
             source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
         }
         player.setMediaSource(source)
+        Timber.d("Preparing track=$track progress=$progress")
         player.seekTo(track, progress)
         player.prepare()
     }
@@ -197,6 +200,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
             audioManager.abandonAudioFocus(this)
         }
         Timber.d("Abandon focus: %d", result)
+        isReady = false
     }
 
     override fun release() {

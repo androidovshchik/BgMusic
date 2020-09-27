@@ -63,7 +63,7 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
     }
 
     override fun saveProgress(track: Int) {
-        Timber.d("Saving progress track=$track")
+        Timber.d("Saving track=$track")
         preferences.track = track
     }
 
@@ -91,7 +91,9 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
     }
 
     override fun onDestroy() {
-        preferences.position = player.position
+        val position = player.position
+        Timber.d("Saving position=$position")
+        preferences.position = position
         playbackChanges.removeFreshObserver(this)
         job.cancelChildren()
         player.release()
