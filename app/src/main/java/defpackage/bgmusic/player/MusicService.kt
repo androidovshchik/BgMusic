@@ -2,7 +2,9 @@ package defpackage.bgmusic.player
 
 import android.app.AlarmManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
 import android.os.SystemClock
 import android.widget.RemoteViews
@@ -14,12 +16,18 @@ import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
 import defpackage.bgmusic.R
 import defpackage.bgmusic.extension.cancelAlarm
+import defpackage.bgmusic.extension.isRunning
 import defpackage.bgmusic.extension.pendingReceiverFor
+import defpackage.bgmusic.extension.startForegroundService
 import defpackage.bgmusic.playbackChanges
 import defpackage.bgmusic.service.RestartReceiver
 import kotlinx.coroutines.*
+import org.jetbrains.anko.activityManager
 import org.jetbrains.anko.alarmManager
+import org.jetbrains.anko.startService
+import org.jetbrains.anko.stopService
 import timber.log.Timber
+import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -83,5 +91,52 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
 
     override val coroutineContext = Dispatchers.Main + job + CoroutineExceptionHandler { _, e ->
         Timber.e(e)
+    }
+
+    companion object {
+
+        /**
+         * @return true if service is running
+         */
+        @Throws(SecurityException::class)
+        fun start(context: Context, vararg params: Pair<String, Any?>): Boolean {
+            with(context) {
+                return if (!activityManager.isRunning<MusicService>()) {
+                    startForegroundService<MusicService>() != null
+                } else {
+                    startService<MusicService>(*params) != null
+                }
+            }
+        }
+
+        /**
+         * @return true if service is stopped
+         */
+        @Suppress("unused")
+        fun stop(context: Context): Boolean {
+            with(context) {
+                if (activityManager.isRunning<MusicService>()) {
+                    return stopService<MusicService>()
+                }
+            }
+            return true
+        }
+    }
+}
+
+class ServiceRunnable(context: Context) : Runnable {
+
+    private val reference = WeakReference(context)
+
+    override fun run() {
+        try {
+            reference.get()?.let {
+                MusicService.start(it)
+            }
+        } catch (e: Throwable) {
+            Timber.e(e)
+            @Suppress("DEPRECATION")
+            Handler().postDelayed(this, 1000)
+        }
     }
 }

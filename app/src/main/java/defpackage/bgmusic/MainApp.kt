@@ -6,8 +6,7 @@ import android.app.NotificationManager
 import androidx.core.app.NotificationCompat
 import com.jakewharton.threetenabp.AndroidThreeTen
 import defpackage.bgmusic.extension.isOreoPlus
-import defpackage.bgmusic.extension.startForegroundService
-import defpackage.bgmusic.player.MusicService
+import defpackage.bgmusic.player.ServiceRunnable
 import org.jetbrains.anko.notificationManager
 import timber.log.Timber
 
@@ -43,7 +42,7 @@ class MainApp : Application() {
         AndroidThreeTen.init(this)
         when (BuildConfig.MODE) {
             Mode.SERVICE.id -> {
-                startForegroundService<MusicService>()
+                ServiceRunnable(applicationContext).run()
             }
             Mode.WORKER_ONE_TIME.id -> {
             }
