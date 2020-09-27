@@ -41,8 +41,8 @@ class MusicService : Service(), CoroutineScope, Observer<Boolean> {
         return START_STICKY
     }
 
-    override fun onChanged(t: Boolean) {
-        if (t) {
+    override fun onChanged(hasPause: Boolean) {
+        if (hasPause) {
             player.startPlay()
         }
     }

@@ -6,7 +6,6 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
-import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
@@ -30,6 +29,8 @@ import java.util.concurrent.TimeUnit
 
 interface IPlayer {
 
+    fun setMaxVolume()
+
     fun startPlay()
 
     fun resumePlay()
@@ -47,13 +48,13 @@ private val urls = arrayOf(
 )
 
 @SuppressLint("NewApi")
-@Suppress("MemberVisibilityCanBePrivate")
 class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeListener {
 
     private val audioManager = context.audioManager
+
+    @Suppress("DEPRECATION")
     private val focusHandler = Handler()
-    private var focusRequest: AudioFocusRequest? = null
-    private val forceRequest by lazy {
+    private val focusRequest by lazy {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -65,31 +66,12 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
             .setOnAudioFocusChangeListener(this, focusHandler)
             .build()
     }
-    private val awaitRequest by lazy {
-        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_NONE)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAcceptsDelayedFocusGain(true)
-            .setOnAudioFocusChangeListener(this, focusHandler)
-            .build()
-    }
 
-    private val player: ExoPlayer
+    private val player = SimpleExoPlayer.Builder(context).build()
 
     private val sourceFactory: MediaSourceFactory
 
     init {
-        if (isOreoPlus()) {
-            focusRequest = forceRequest
-        }
-        player = SimpleExoPlayer.Builder(context)
-            .build().apply {
-                repeatMode = Player.REPEAT_MODE_ALL
-            }
         val control = CacheControl.Builder()
             .maxAge(Integer.MAX_VALUE, TimeUnit.SECONDS)
             .build()
@@ -105,15 +87,22 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         sourceFactory = ProgressiveMediaSource.Factory(cacheSourceFactory).apply {
             setLoadErrorHandlingPolicy(CustomPolicy())
         }
+        player.apply {
+            repeatMode = Player.REPEAT_MODE_ALL
+            setMediaSource(source)
+        }
     }
 
-    override fun startPlay() {
+    override fun setMaxVolume() {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
             if (BuildConfig.DEBUG) maxVolume / 4 else maxVolume,
             0
         )
+    }
+
+    override fun startPlay() {
         val source = ConcatenatingMediaSource()
         source.addMediaSources(urls.map { url ->
             sourceFactory.createMediaSource(MediaItem.fromUri(url))
@@ -121,7 +110,7 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         player.setMediaSource(source)
         player.prepare()
         val result = if (isOreoPlus()) {
-            audioManager.requestAudioFocus(focusRequest!!)
+            audioManager.requestAudioFocus(focusRequest)
         } else {
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
@@ -137,6 +126,7 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
     }
 
     override fun resumePlay() {
+        setMaxVolume()
         player.playWhenReady = true
     }
 
@@ -165,7 +155,7 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
     override fun stopPlay() {
         pausePlay()
         val result = if (isOreoPlus()) {
-            audioManager.abandonAudioFocusRequest(focusRequest!!)
+            audioManager.abandonAudioFocusRequest(focusRequest)
         } else {
             @Suppress("DEPRECATION")
             audioManager.abandonAudioFocus(this)
