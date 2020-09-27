@@ -98,7 +98,6 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
         /**
          * @return true if service is running
          */
-        @Throws(SecurityException::class)
         fun start(context: Context, vararg params: Pair<String, Any?>): Boolean {
             with(context) {
                 return if (!activityManager.isRunning<MusicService>()) {
@@ -133,7 +132,7 @@ class ServiceRunnable(context: Context) : Runnable {
             reference.get()?.let {
                 MusicService.start(it)
             }
-        } catch (e: Throwable) {
+        } catch (e: SecurityException) {
             Timber.e(e)
             @Suppress("DEPRECATION")
             Handler().postDelayed(this, 1000)
