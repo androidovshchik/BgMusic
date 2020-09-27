@@ -59,7 +59,7 @@ class NotificationService : NotificationListenerService() {
 
         private val tag = NotificationService::class.java.simpleName
 
-        private val chars = arrayOf("*", ":", ";", "$", "#", "@", "&", "%", "=", "\\", "/")
+        private val chars = arrayOf("*", ":", ";", "$", "#", "@", "&", "=", "\\", "/")
     }
 }
 

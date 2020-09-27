@@ -110,7 +110,7 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
 
     override fun startPlay() {
         if (player.playWhenReady) {
-            Timber.w("NOTICE app already is playing")
+            Timber.w("Skipping start playing")
             return
         }
         val result = if (isOreoPlus()) {
