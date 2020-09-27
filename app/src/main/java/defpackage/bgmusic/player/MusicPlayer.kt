@@ -45,7 +45,7 @@ interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListene
 
     fun setMaxVolume()
 
-    fun setPlaylist()
+    fun preparePlaylist()
 
     fun pausePlay()
 
@@ -135,7 +135,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         )
     }
 
-    override fun setPlaylist() {
+    override fun preparePlaylist() {
         val source = ConcatenatingMediaSource()
         source.addMediaSources(urls.map { url ->
             sourceFactory.createMediaSource(MediaItem.fromUri(url))
