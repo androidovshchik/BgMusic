@@ -1,5 +1,6 @@
-package defpackage.bgmusic
+package defpackage.bgmusic.player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -18,9 +19,10 @@ import com.google.android.exoplayer2.upstream.DefaultLoadErrorHandlingPolicy
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
+import defpackage.bgmusic.BuildConfig
 import defpackage.bgmusic.extension.isOreoPlus
+import defpackage.bgmusic.httpClient
 import okhttp3.CacheControl
-import okhttp3.OkHttpClient
 import org.jetbrains.anko.audioManager
 import timber.log.Timber
 import java.io.File
@@ -31,12 +33,37 @@ private val urls = arrayOf(
     "https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3"
 )
 
+@SuppressLint("NewApi")
 @Suppress("MemberVisibilityCanBePrivate")
 class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
     private val audioManager = context.audioManager
-    private var focusRequest: AudioFocusRequest? = null
     private val focusHandler = Handler()
+    private var focusRequest: AudioFocusRequest? = null
+    private val forceRequest by lazy {
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setAcceptsDelayedFocusGain(true)
+            .setOnAudioFocusChangeListener(this, focusHandler)
+            .build()
+    }
+    private val awaitRequest by lazy {
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_NONE)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setAcceptsDelayedFocusGain(true)
+            .setOnAudioFocusChangeListener(this, focusHandler)
+            .build()
+    }
 
     private val player: ExoPlayer
 
@@ -44,16 +71,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
 
     init {
         if (isOreoPlus()) {
-            focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                .setAcceptsDelayedFocusGain(true)
-                .setOnAudioFocusChangeListener(this, focusHandler)
-                .build()
+            focusRequest = forceRequest
         }
         player = SimpleExoPlayer.Builder(context)
             .build().apply {
@@ -77,14 +95,18 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
     }
 
     fun startPlay() {
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            if (BuildConfig.DEBUG) maxVolume / 4 else maxVolume,
+            0
+        )
         val source = ConcatenatingMediaSource()
         source.addMediaSources(urls.map { url ->
             sourceFactory.createMediaSource(MediaItem.fromUri(url))
         })
         player.setMediaSource(source)
         player.prepare()
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
         val result = if (isOreoPlus()) {
             audioManager.requestAudioFocus(focusRequest!!)
         } else {
@@ -107,7 +129,15 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
             AudioManager.AUDIOFOCUS_GAIN -> {
                 player.playWhenReady = true
             }
-            AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                player.playWhenReady = false
+                //stopPlay()
+                /*focusHandler.postDelayed({
+                    focusRequest = awaitRequest
+                    startPlay()
+                }, 2000)*/
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 player.playWhenReady = false
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
@@ -116,8 +146,12 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    fun stopPlay() {
+    fun pausePlay() {
         player.playWhenReady = false
+    }
+
+    fun stopPlay() {
+        pausePlay()
         val result = if (isOreoPlus()) {
             audioManager.abandonAudioFocusRequest(focusRequest!!)
         } else {
@@ -131,15 +165,6 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         stopPlay()
         player.stop()
         player.release()
-    }
-
-    companion object {
-
-        val httpClient: OkHttpClient = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(0, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)
-            .build()
     }
 }
 
