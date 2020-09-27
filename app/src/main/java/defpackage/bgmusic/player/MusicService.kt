@@ -14,6 +14,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
+import defpackage.bgmusic.Preferences
 import defpackage.bgmusic.R
 import defpackage.bgmusic.extension.cancelAlarm
 import defpackage.bgmusic.extension.isRunning
@@ -35,6 +36,8 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
 
     private val job = SupervisorJob()
 
+    private val preferences by lazy { Preferences(applicationContext) }
+
     private val player by lazy { MusicPlayer(this, applicationContext) }
 
     override fun onBind(intent: Intent): IBinder? = null
@@ -50,13 +53,21 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
                 .setSound(null)
                 .build()
         )
-        player.preparePlaylist()
+        player.preparePlaylist(preferences.track, preferences.progress)
         player.startPlay()
         playbackChanges.observeForeverFreshly(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
+    }
+
+    override fun saveTrack(i: Int) {
+        preferences.track = i
+    }
+
+    override fun saveProgress(value: Int) {
+        preferences.progress = value
     }
 
     override fun setAlarmIfNeeded() {

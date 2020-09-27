@@ -34,6 +34,10 @@ import java.util.concurrent.TimeUnit
 
 interface IHolder {
 
+    fun saveTrack(i: Int)
+
+    fun saveProgress(value: Int)
+
     fun setAlarmIfNeeded()
 
     fun cancelAlarm()
@@ -47,7 +51,7 @@ interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListene
 
     fun setMaxVolume()
 
-    fun preparePlaylist()
+    fun preparePlaylist(track: Int, progress: Int)
 
     fun pausePlay()
 
@@ -102,7 +106,6 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         }
         player.repeatMode = Player.REPEAT_MODE_ALL
         player.addListener(this)
-        player.setMediaSource(source)
     }
 
     override fun startPlay() {
@@ -141,11 +144,12 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         )
     }
 
-    override fun preparePlaylist() {
+    override fun preparePlaylist(track: Int, progress: Int) {
         source.clear()
         urls.forEach {
             source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
         }
+        player.setMediaSource(source)
         player.prepare()
     }
 
@@ -172,7 +176,16 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         trackGroups: TrackGroupArray,
         trackSelections: TrackSelectionArray
     ) {
-        Timber.e("onTracksChanged")
+        Timber.e("onTracksChanged ${player.currentWindowIndex}")
+        holder.get()?.saveTrack(player.currentWindowIndex)
+    }
+
+    override fun onPositionDiscontinuity(reason: Int) {
+        Timber.e("onPositionDiscontinuity $reason")
+    }
+
+    override fun onSeekProcessed() {
+        super.onSeekProcessed()
     }
 
     override fun pausePlay() {
