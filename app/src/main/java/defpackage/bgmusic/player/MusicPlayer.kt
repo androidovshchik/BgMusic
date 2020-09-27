@@ -28,6 +28,19 @@ import timber.log.Timber
 import java.io.File
 import java.util.concurrent.TimeUnit
 
+interface IPlayer {
+
+    fun startPlay()
+
+    fun resumePlay()
+
+    fun pausePlay()
+
+    fun stopPlay()
+
+    fun release()
+}
+
 private val urls = arrayOf(
     "https://www.oum.ru/upload/audio/52f/52f961351291b176bca19019a6b3399f.mp3",
     "https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3"
@@ -35,7 +48,7 @@ private val urls = arrayOf(
 
 @SuppressLint("NewApi")
 @Suppress("MemberVisibilityCanBePrivate")
-class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
+class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeListener {
 
     private val audioManager = context.audioManager
     private val focusHandler = Handler()
@@ -94,7 +107,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    fun startPlay() {
+    override fun startPlay() {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
@@ -119,26 +132,25 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
         Timber.d("Request focus: %d", result)
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            player.playWhenReady = true
+            resumePlay()
         }
+    }
+
+    override fun resumePlay() {
+        player.playWhenReady = true
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
         Timber.d("Changed focus: %d", focusChange)
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
-                player.playWhenReady = true
+                resumePlay()
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
-                player.playWhenReady = false
-                //stopPlay()
-                /*focusHandler.postDelayed({
-                    focusRequest = awaitRequest
-                    startPlay()
-                }, 2000)*/
+                stopPlay()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                player.playWhenReady = false
+                pausePlay()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 // ... pausing or ducking depends on your app
@@ -146,11 +158,11 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         }
     }
 
-    fun pausePlay() {
+    override fun pausePlay() {
         player.playWhenReady = false
     }
 
-    fun stopPlay() {
+    override fun stopPlay() {
         pausePlay()
         val result = if (isOreoPlus()) {
             audioManager.abandonAudioFocusRequest(focusRequest!!)
@@ -161,7 +173,7 @@ class MusicPlayer(context: Context) : AudioManager.OnAudioFocusChangeListener {
         Timber.d("Abandon focus: %d", result)
     }
 
-    fun release() {
+    override fun release() {
         stopPlay()
         player.stop()
         player.release()

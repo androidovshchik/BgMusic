@@ -35,12 +35,6 @@ class MusicService : Service(), CoroutineScope, Observer<Boolean> {
         )
         player.startPlay()
         playbackChanges.observeForeverFreshly(this)
-        launch {
-            while (true) {
-                delay(5_000)
-                delay(5_000)
-            }
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
