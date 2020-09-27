@@ -9,5 +9,5 @@ class Preferences(context: Context) : KotprefModel(context) {
 
     var track by intPref(0, "track")
 
-    var progress by longPref(0, "progress")
+    var position by longPref(0, "position")
 }
