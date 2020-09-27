@@ -1,42 +1,39 @@
 package defpackage.bgmusic.service
 
+import android.annotation.SuppressLint
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Bundle
-import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.annotation.UiThread
 import defpackage.bgmusic.BuildConfig
+import defpackage.bgmusic.playbackChanges
 import timber.log.Timber
 import java.util.*
 
 class NotificationService : NotificationListenerService() {
 
-    private var has = false
-
+    @UiThread
+    @SuppressLint("SwitchIntDef")
     override fun onNotificationPosted(notification: StatusBarNotification) {
         if (BuildConfig.DEBUG) {
             logNotification(notification)
         }
-        Timber.e("is ui ${Looper.myLooper() == Looper.getMainLooper()}")
         notification.notification.extras.getParcelable<MediaSession.Token>("android.mediaSession")
             ?.let {
                 val mediaController = MediaController(applicationContext, it)
                 when (mediaController.playbackState?.state) {
                     PlaybackState.STATE_PAUSED -> {
-                    }//playbackChanges.postValue(true)
-                    PlaybackState.STATE_PLAYING -> {
-                    }//playbackChanges.postValue(false)
+                        playbackChanges.value = true
+                    }
                 }
-                Timber.e("mc1 ${mediaController.packageName}")
-                Timber.e("mc2 ${mediaController.sessionActivity?.javaClass?.name}")
-                Timber.e("mc2 ${mediaController.playbackState}")
             }
     }
 
+    @UiThread
     override fun onNotificationRemoved(notification: StatusBarNotification) {
-        Timber.e("R is ui ${Looper.myLooper() == Looper.getMainLooper()}")
     }
 
     private fun logNotification(notification: StatusBarNotification) {
@@ -47,11 +44,14 @@ class NotificationService : NotificationListenerService() {
         BeautyCat.log(tag, "packageName: ${notification.packageName}", char)
         notification.notification.actions?.let {
             BeautyCat.log(tag, "Notification actions")
-            for (action in it) {
-                BeautyCat.log(tag, "action.title: ${action.title}", char)
+            it.forEachIndexed { i, action ->
+                BeautyCat.log(tag, "action.title[$i]: ${action.title}", char)
             }
         }
-        BeautyCat.bun(tag, notification.notification.extras, char)
+        notification.notification.extras?.let {
+            BeautyCat.log(tag, "Notification extras")
+            BeautyCat.map(tag, it, char)
+        }
         BeautyCat.div(tag, char)
     }
 
@@ -59,7 +59,7 @@ class NotificationService : NotificationListenerService() {
 
         private val tag = NotificationService::class.java.simpleName
 
-        private val chars = arrayOf("*", ":", ";", "$", "#", "@", "&", "%", "=", "~", "-")
+        private val chars = arrayOf("*", ":", ";", "$", "#", "@", "&", "%", "=", "\\", "/")
     }
 }
 
@@ -81,8 +81,8 @@ object BeautyCat {
         }
     }
 
-    fun bun(tag: String, extras: Bundle?, char: String) {
-        for (key in extras?.keySet() ?: return) {
+    fun map(tag: String, extras: Bundle, char: String) {
+        for (key in extras.keySet()) {
             log(tag, "$key: ${extras[key]}", char)
         }
     }
@@ -96,6 +96,6 @@ object BeautyCat {
     }
 
     private fun repeat(what: String, times: Int): String {
-        return Collections.nCopies(times, what).joinToString(", ")
+        return Collections.nCopies(times, what).joinToString("")
     }
 }
