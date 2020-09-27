@@ -33,6 +33,7 @@ class MusicService : Service(), CoroutineScope, Observer<Boolean> {
                 .setSound(null)
                 .build()
         )
+        player.setPlaylist()
         player.startPlay()
         playbackChanges.observeForeverFreshly(this)
     }

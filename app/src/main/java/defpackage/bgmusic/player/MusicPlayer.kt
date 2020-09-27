@@ -21,6 +21,7 @@ import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import defpackage.bgmusic.BuildConfig
 import defpackage.bgmusic.extension.isOreoPlus
 import defpackage.bgmusic.httpClient
+import defpackage.bgmusic.urls
 import okhttp3.CacheControl
 import org.jetbrains.anko.audioManager
 import timber.log.Timber
@@ -30,6 +31,8 @@ import java.util.concurrent.TimeUnit
 interface IPlayer {
 
     fun setMaxVolume()
+
+    fun setPlaylist()
 
     fun startPlay()
 
@@ -41,11 +44,6 @@ interface IPlayer {
 
     fun release()
 }
-
-private val urls = arrayOf(
-    "https://www.oum.ru/upload/audio/52f/52f961351291b176bca19019a6b3399f.mp3",
-    "https://www.oum.ru/upload/audio/554/554915aeb6cf2e9b17ac46dbb1abce01.mp3"
-)
 
 @SuppressLint("NewApi")
 class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeListener {
@@ -89,7 +87,6 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         }
         player.apply {
             repeatMode = Player.REPEAT_MODE_ALL
-            setMediaSource(source)
         }
     }
 
@@ -102,13 +99,20 @@ class MusicPlayer(context: Context) : IPlayer, AudioManager.OnAudioFocusChangeLi
         )
     }
 
-    override fun startPlay() {
+    override fun setPlaylist() {
         val source = ConcatenatingMediaSource()
         source.addMediaSources(urls.map { url ->
             sourceFactory.createMediaSource(MediaItem.fromUri(url))
         })
         player.setMediaSource(source)
         player.prepare()
+    }
+
+    override fun startPlay() {
+        if (player.playWhenReady) {
+            Timber.w("NOTICE app already is playing")
+            return
+        }
         val result = if (isOreoPlus()) {
             audioManager.requestAudioFocus(focusRequest)
         } else {
