@@ -39,28 +39,31 @@ class NotificationService : NotificationListenerService() {
     }
 
     private fun logNotification(notification: StatusBarNotification) {
-        BeautyCat.logDivider(tag, ":")
-        BeautyCat.logCentered(" ", tag, "New notification")
-        BeautyCat.logCentered(":", tag, "id: " + notification.id)
-        BeautyCat.logCentered(":", tag, "packageName: " + notification.packageName)
+        val char = chars[chars.indices.random()]
+        BeautyCat.div(tag, char)
+        BeautyCat.log(tag, " ", "New notification")
+        BeautyCat.log(tag, char, "id: " + notification.id)
+        BeautyCat.log(tag, char, "packageName: " + notification.packageName)
         notification.notification.actions?.let {
-            BeautyCat.logCentered(" ", tag, "Notification actions")
+            BeautyCat.log(tag, " ", "Notification actions")
             for (action in it) {
-                BeautyCat.logCentered(":", tag, "action.title: " + action.title)
+                BeautyCat.log(tag, char, "action.title: ${action.title}")
             }
         }
         notification.notification.extras?.let {
-            BeautyCat.logCentered(" ", tag, "Notification extras")
+            BeautyCat.log(tag, " ", "Notification extras")
             for (key in it.keySet()) {
-                Timber.d("$key: ${it[key]}")
+                BeautyCat.log(tag, char, "$key: ${it[key]}")
             }
         }
-        BeautyCat.logDivider(tag, ":")
+        BeautyCat.div(tag, char)
     }
 
     companion object {
 
         private val tag = NotificationService::class.java.simpleName
+
+        private val chars = arrayOf("*", ":", ";", "$", "#", "@", "&", "%", "=", "~", "-")
     }
 }
 
@@ -72,21 +75,25 @@ object BeautyCat {
         return Timber.tag(tag)
     }
 
-    fun logCentered(character: String, tag: String, text: String) {
+    fun log(tag: String, character: String, text: String) {
         val length = text.length + 2
         if (length >= STYLED_LOG_LENGTH) {
-            log(tag, "$character%s${text.substring(0, STYLED_LOG_LENGTH - 5)}%s...$character")
+            print(tag, "$character%s${text.substring(0, STYLED_LOG_LENGTH - 5)}%s...$character")
         } else {
             val log = "$character%s$text%s${if (length % 2 == 0) "" else " "}$character"
-            log(tag, log, repeat(" ", (STYLED_LOG_LENGTH - length) / 2))
+            print(tag, log, repeat(" ", (STYLED_LOG_LENGTH - length) / 2))
         }
     }
 
-    fun logDivider(tag: String, character: String) {
+    fun extra() {
+
+    }
+
+    fun div(tag: String, character: String) {
         tag(tag).i(repeat(character, STYLED_LOG_LENGTH))
     }
 
-    private fun log(tag: String, text: String, edge: String = "") {
+    private fun print(tag: String, text: String, edge: String = "") {
         tag(tag).i(text, edge, edge)
     }
 
