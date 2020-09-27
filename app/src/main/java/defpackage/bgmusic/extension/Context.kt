@@ -79,6 +79,10 @@ inline fun <reified T : BroadcastReceiver> Context.createAlarm(requestCode: Int,
     }
 }
 
-inline fun <reified T : BroadcastReceiver> Context.cancelAlarm(requestCode: Int) {
-    alarmManager.cancel(pendingReceiverFor<T>(requestCode, PendingIntent.FLAG_NO_CREATE))
+inline fun <reified T : BroadcastReceiver> Context.cancelAlarm(
+    requestCode: Int = 0,
+    flags: Int = PendingIntent.FLAG_UPDATE_CURRENT,
+    vararg params: Pair<String, Any?>
+) {
+    alarmManager.cancel(pendingReceiverFor<T>(requestCode, flags))
 }

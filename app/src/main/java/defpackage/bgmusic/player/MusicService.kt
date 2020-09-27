@@ -13,6 +13,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
 import defpackage.bgmusic.R
+import defpackage.bgmusic.extension.cancelAlarm
 import defpackage.bgmusic.extension.pendingReceiverFor
 import defpackage.bgmusic.playbackChanges
 import defpackage.bgmusic.service.RestartReceiver
@@ -61,6 +62,10 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
                 pendingReceiverFor<RestartReceiver>()
             )
         }
+    }
+
+    override fun cancelAlarm() {
+        cancelAlarm<RestartReceiver>()
     }
 
     override fun onChanged(hasPause: Boolean) {

@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit
 interface IHolder {
 
     fun setAlarmIfNeeded()
+
+    fun cancelAlarm()
 }
 
 interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListener {
@@ -80,6 +82,8 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
 
     private val sourceFactory: MediaSourceFactory
 
+    private val source = ConcatenatingMediaSource()
+
     init {
         val control = CacheControl.Builder()
             .maxAge(Integer.MAX_VALUE, TimeUnit.SECONDS)
@@ -98,6 +102,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         }
         player.repeatMode = Player.REPEAT_MODE_ALL
         player.addListener(this)
+        player.setMediaSource(source)
     }
 
     override fun startPlay() {
@@ -105,6 +110,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
             Timber.w("Skipping start playing")
             return
         }
+        holder.get()?.cancelAlarm()
         val result = if (isOreoPlus()) {
             audioManager.requestAudioFocus(focusRequest)
         } else {
@@ -136,11 +142,10 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
     }
 
     override fun preparePlaylist() {
-        val source = ConcatenatingMediaSource()
-        source.addMediaSources(urls.map { url ->
-            sourceFactory.createMediaSource(MediaItem.fromUri(url))
-        })
-        player.setMediaSource(source)
+        source.clear()
+        urls.forEach {
+            source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
+        }
         player.prepare()
     }
 
