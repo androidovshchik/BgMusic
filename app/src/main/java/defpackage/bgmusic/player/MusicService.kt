@@ -14,6 +14,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
+import com.chibatching.kotpref.bulk
 import defpackage.bgmusic.Preferences
 import defpackage.bgmusic.R
 import defpackage.bgmusic.extension.cancelAlarm
@@ -62,9 +63,14 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
         return START_STICKY
     }
 
-    override fun saveProgress(track: Int) {
-        Timber.d("Saving track=$track")
-        preferences.track = track
+    @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE", "LocalVariableName")
+    override fun saveProgress(_track: Int) {
+        val _position = player.position
+        Timber.d("Saving track=$_track position=$_position")
+        preferences.bulk {
+            track = _track
+            position = _position
+        }
     }
 
     override fun setAlarmIfNeeded() {

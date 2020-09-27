@@ -189,6 +189,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
 
     override fun pausePlay() {
         player.playWhenReady = false
+        holder.get()?.saveProgress(player.currentWindowIndex)
     }
 
     override fun stopPlay() {
