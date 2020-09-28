@@ -10,20 +10,12 @@ import defpackage.bgmusic.player.ServiceRunnable
 import org.jetbrains.anko.notificationManager
 import timber.log.Timber
 
-enum class Mode(val id: Int) {
-    SERVICE(0),
-    WORKER_ONE_TIME(1),
-    WORKER_PERIODIC(2);
-}
-
 @Suppress("unused")
 class MainApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree())
-        }
+        Timber.plant(LogTree())
         if (isOreoPlus()) {
             notificationManager.createNotificationChannel(
                 NotificationChannel("main", "Main", NotificationManager.IMPORTANCE_DEFAULT)
@@ -40,13 +32,11 @@ class MainApp : Application() {
             )
         }
         AndroidThreeTen.init(this)
-        when (BuildConfig.MODE) {
-            Mode.SERVICE.id -> {
+        when (BuildConfig.FLAVOR) {
+            "service" -> {
                 ServiceRunnable(applicationContext).run()
             }
-            Mode.WORKER_ONE_TIME.id -> {
-            }
-            Mode.WORKER_PERIODIC.id -> {
+            "worker" -> {
             }
         }
     }
