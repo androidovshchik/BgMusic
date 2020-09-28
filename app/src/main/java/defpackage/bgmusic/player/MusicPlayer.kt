@@ -45,13 +45,13 @@ interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListene
 
     val position: Long
 
+    fun preparePlaylist(track: Int, progress: Long)
+
     fun startPlay()
 
     fun resumePlay()
 
     fun setMaxVolume()
-
-    fun preparePlaylist(track: Int, progress: Long)
 
     fun pausePlay()
 
@@ -113,6 +113,17 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         player.addListener(this)
     }
 
+    override fun preparePlaylist(track: Int, progress: Long) {
+        source.clear()
+        urls.forEach {
+            source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
+        }
+        player.setMediaSource(source)
+        Timber.d("Preparing track=$track progress=$progress")
+        player.seekTo(track, progress)
+        player.prepare()
+    }
+
     override fun startPlay() {
         if (isReady) {
             Timber.w("Skipping start playing")
@@ -145,20 +156,9 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audioManager.setStreamVolume(
             AudioManager.STREAM_MUSIC,
-            if (BuildConfig.DEBUG) maxVolume / 2 else maxVolume,
+            if (BuildConfig.DEBUG) maxVolume / 3 else maxVolume,
             0
         )
-    }
-
-    override fun preparePlaylist(track: Int, progress: Long) {
-        source.clear()
-        urls.forEach {
-            source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
-        }
-        player.setMediaSource(source)
-        Timber.d("Preparing track=$track progress=$progress")
-        player.seekTo(track, progress)
-        player.prepare()
     }
 
     override fun onAudioFocusChange(focusChange: Int) {
@@ -187,9 +187,15 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         holder.get()?.saveProgress(player.currentWindowIndex)
     }
 
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        Timber.d("Play changes playWhenReady=$playWhenReady reason=$reason")
+        if (!playWhenReady) {
+            holder.get()?.saveProgress(player.currentWindowIndex)
+        }
+    }
+
     override fun pausePlay() {
         player.playWhenReady = false
-        holder.get()?.saveProgress(player.currentWindowIndex)
     }
 
     override fun stopPlay() {
