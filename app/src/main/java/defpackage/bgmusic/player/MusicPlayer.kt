@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit
 
 interface IHolder {
 
-    fun saveProgress(track: Int)
+    fun saveProgress()
 
     fun setAlarmIfNeeded()
 
@@ -42,6 +42,8 @@ interface IHolder {
 }
 
 interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListener {
+
+    val track: Int
 
     val position: Long
 
@@ -90,6 +92,9 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
     private val source = ConcatenatingMediaSource()
 
     private var isReady = false
+
+    override val track: Int
+        get() = player.currentWindowIndex
 
     override val position: Long
         get() = player.currentPosition
@@ -184,13 +189,13 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         trackGroups: TrackGroupArray,
         trackSelections: TrackSelectionArray
     ) {
-        holder.get()?.saveProgress(player.currentWindowIndex)
+        holder.get()?.saveProgress()
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
         Timber.d("Play changes playWhenReady=$playWhenReady reason=$reason")
         if (!playWhenReady) {
-            holder.get()?.saveProgress(player.currentWindowIndex)
+            holder.get()?.saveProgress()
         }
     }
 

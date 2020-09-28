@@ -63,8 +63,9 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
         return START_STICKY
     }
 
-    @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE", "LocalVariableName")
-    override fun saveProgress(_track: Int) {
+    @Suppress("LocalVariableName")
+    override fun saveProgress() {
+        val _track = player.track
         val _position = player.position
         Timber.d("Saving track=$_track position=$_position")
         preferences.bulk {
@@ -97,9 +98,7 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
     }
 
     override fun onDestroy() {
-        val position = player.position
-        Timber.d("Saving position=$position")
-        preferences.position = position
+        saveProgress()
         playbackChanges.removeFreshObserver(this)
         job.cancelChildren()
         player.release()
@@ -144,6 +143,9 @@ class ServiceRunnable(context: Context) : Runnable {
 
     private val reference = WeakReference(context)
 
+    @Suppress("DEPRECATION")
+    private val handler = Handler()
+
     override fun run() {
         try {
             reference.get()?.let {
@@ -151,8 +153,7 @@ class ServiceRunnable(context: Context) : Runnable {
             }
         } catch (e: SecurityException) {
             Timber.e(e)
-            @Suppress("DEPRECATION")
-            Handler().postDelayed(this, 1000)
+            handler.postDelayed(this, 1000)
         }
     }
 }
