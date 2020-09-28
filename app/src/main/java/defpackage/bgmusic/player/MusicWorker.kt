@@ -36,7 +36,7 @@ class MusicWorker(context: Context, params: WorkerParameters) : Worker(context, 
     }
 
     override fun onStopped() {
-        holder.saveProgress()
+        holder.saveProgress(player.track, player.position)
         playbackChanges.removeFreshObserver(this)
         player.release()
     }

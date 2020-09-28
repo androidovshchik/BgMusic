@@ -34,11 +34,11 @@ class MainApp : Application() {
             )
         }
         AndroidThreeTen.init(this)
-        when (BuildConfig.FLAVOR) {
-            "service" -> {
+        when {
+            BuildConfig.FLAVOR.startsWith("service") -> {
                 ServiceRunnable(applicationContext).run()
             }
-            "worker" -> {
+            BuildConfig.FLAVOR.startsWith("worker") -> {
                 MusicWorker.launch(applicationContext)
             }
         }

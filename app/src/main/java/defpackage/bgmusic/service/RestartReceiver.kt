@@ -14,11 +14,11 @@ class RestartReceiver : BroadcastReceiver() {
     @SuppressLint("UnsafeProtectedBroadcastReceiver")
     override fun onReceive(context: Context, intent: Intent) {
         playbackChanges.value = true
-        when (BuildConfig.FLAVOR) {
-            "service" -> {
+        when {
+            BuildConfig.FLAVOR.startsWith("service") -> {
                 ServiceRunnable(context).run()
             }
-            "worker" -> {
+            BuildConfig.FLAVOR.startsWith("worker") -> {
                 MusicWorker.cancel(context)
                 MusicWorker.launch(context)
             }

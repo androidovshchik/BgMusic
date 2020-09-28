@@ -21,10 +21,15 @@ class ContextHolder(context: Context) : IHolder {
 
     private val preferences = Preferences(context)
 
-    override fun saveProgress() {
+    override val track: Int
+        get() = preferences.track
+
+    override val position: Long
+        get() = preferences.position
+
+    @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+    override fun saveProgress(_track: Int, _position: Long) {
         reference.get()?.run {
-            val _track = player.track
-            val _position = player.position
             Timber.d("Saving track=$_track position=$_position")
             preferences.bulk {
                 track = _track

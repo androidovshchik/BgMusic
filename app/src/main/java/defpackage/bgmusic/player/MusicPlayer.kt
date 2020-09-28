@@ -34,7 +34,11 @@ import java.util.concurrent.TimeUnit
 
 interface IHolder {
 
-    fun saveProgress()
+    val track: Int
+
+    val position: Long
+
+    fun saveProgress(track: Int, position: Long)
 
     fun setAlarmIfNeeded()
 
@@ -47,7 +51,7 @@ interface IPlayer : Player.EventListener, AudioManager.OnAudioFocusChangeListene
 
     val position: Long
 
-    fun preparePlaylist(track: Int, progress: Long)
+    fun preparePlaylist()
 
     fun startPlay()
 
@@ -118,14 +122,16 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         player.addListener(this)
     }
 
-    override fun preparePlaylist(track: Int, progress: Long) {
+    override fun preparePlaylist() {
         source.clear()
         urls.forEach {
             source.addMediaSource(sourceFactory.createMediaSource(MediaItem.fromUri(it)))
         }
         player.setMediaSource(source)
-        Timber.d("Preparing track=$track progress=$progress")
-        player.seekTo(track, progress)
+        val track = holder.get()?.track ?: 0
+        val position = holder.get()?.position ?: 0L
+        Timber.d("Preparing track=$track position=$position")
+        player.seekTo(track, position)
         player.prepare()
     }
 
@@ -189,13 +195,13 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         trackGroups: TrackGroupArray,
         trackSelections: TrackSelectionArray
     ) {
-        holder.get()?.saveProgress()
+        holder.get()?.saveProgress(player.currentWindowIndex, player.currentPosition)
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
         Timber.d("Play changes playWhenReady=$playWhenReady reason=$reason")
         if (!playWhenReady) {
-            holder.get()?.saveProgress()
+            holder.get()?.saveProgress(player.currentWindowIndex, player.currentPosition)
         }
     }
 

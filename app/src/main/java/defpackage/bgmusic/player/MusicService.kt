@@ -58,7 +58,7 @@ class MusicService : Service(), Observer<Boolean> {
     }
 
     override fun onDestroy() {
-        holder.saveProgress()
+        holder.saveProgress(player.track, player.position)
         playbackChanges.removeFreshObserver(this)
         player.release()
         super.onDestroy()
