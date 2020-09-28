@@ -6,6 +6,10 @@ import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
 import androidx.work.*
 import defpackage.bgmusic.playbackChanges
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class MusicWorker(context: Context, params: WorkerParameters) : Worker(context, params),
@@ -17,10 +21,14 @@ class MusicWorker(context: Context, params: WorkerParameters) : Worker(context, 
 
     override fun doWork(): Result {
         try {
-            player.preparePlaylist()
-            player.startPlay()
-            playbackChanges.observeForeverFreshly(this)
-            Thread.sleep(TimeUnit.MINUTES.toMillis(10))
+            runBlocking {
+                withContext(Dispatchers.Main) {
+                    player.preparePlaylist()
+                    player.startPlay()
+                    playbackChanges.observeForeverFreshly(this@MusicWorker)
+                }
+                delay(TimeUnit.MINUTES.toMillis(10))
+            }
         } catch (e: Throwable) {
             if (!isStopped) {
                 onStopped()
