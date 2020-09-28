@@ -10,13 +10,20 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
-        buildConfigField("boolean", "SAVE_LOGS", "true")
     }
     flavorDimensions "default"
     productFlavors {
         service {
+            buildConfigField("boolean", "SAVE_LOGS", "false")
+        }
+        service_log {
+            buildConfigField("boolean", "SAVE_LOGS", "true")
         }
         worker {
+            buildConfigField("boolean", "SAVE_LOGS", "false")
+        }
+        worker_log {
+            buildConfigField("boolean", "SAVE_LOGS", "true")
         }
     }
     buildTypes {

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import androidx.core.app.NotificationCompat
 import com.jakewharton.threetenabp.AndroidThreeTen
 import defpackage.bgmusic.extension.isOreoPlus
+import defpackage.bgmusic.player.MusicWorker
 import defpackage.bgmusic.player.ServiceRunnable
 import org.jetbrains.anko.notificationManager
 import timber.log.Timber
@@ -38,6 +39,7 @@ class MainApp : Application() {
                 ServiceRunnable(applicationContext).run()
             }
             "worker" -> {
+                MusicWorker.launch(applicationContext)
             }
         }
     }
