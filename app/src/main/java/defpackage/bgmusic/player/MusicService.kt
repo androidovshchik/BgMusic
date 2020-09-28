@@ -1,45 +1,32 @@
 package defpackage.bgmusic.player
 
-import android.app.AlarmManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
-import android.os.SystemClock
 import android.widget.RemoteViews
-import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.observeForeverFreshly
 import androidx.lifecycle.removeFreshObserver
-import com.chibatching.kotpref.bulk
-import defpackage.bgmusic.Preferences
 import defpackage.bgmusic.R
-import defpackage.bgmusic.extension.cancelAlarm
 import defpackage.bgmusic.extension.isRunning
-import defpackage.bgmusic.extension.pendingReceiverFor
 import defpackage.bgmusic.extension.startForegroundService
 import defpackage.bgmusic.playbackChanges
-import defpackage.bgmusic.service.RestartReceiver
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Runnable
 import org.jetbrains.anko.activityManager
-import org.jetbrains.anko.alarmManager
 import org.jetbrains.anko.startService
 import org.jetbrains.anko.stopService
 import timber.log.Timber
 import java.lang.ref.WeakReference
-import java.util.concurrent.TimeUnit
 
 @Suppress("MemberVisibilityCanBePrivate")
-class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
+class MusicService : Service(), Observer<Boolean> {
 
-    private val job = SupervisorJob()
+    private val holder by lazy { ContextHolder(applicationContext) }
 
-    private val preferences by lazy { Preferences(applicationContext) }
-
-    private val player by lazy { MusicPlayer(this, applicationContext) }
+    private val player by lazy { MusicPlayer(holder, applicationContext) }
 
     override fun onBind(intent: Intent): IBinder? = null
 
@@ -55,41 +42,13 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
                 .build()
         )
         Timber.d("Starting foreground service")
-        player.preparePlaylist(preferences.track, preferences.position)
+        player.preparePlaylist()
         player.startPlay()
         playbackChanges.observeForeverFreshly(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return START_STICKY
-    }
-
-    @Suppress("LocalVariableName")
-    override fun saveProgress() {
-        val _track = player.track
-        val _position = player.position
-        Timber.d("Saving track=$_track position=$_position")
-        preferences.bulk {
-            track = _track
-            position = _position
-        }
-    }
-
-    override fun setAlarmIfNeeded() {
-        val listeners = NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
-        if (!listeners.contains(packageName)) {
-            val delay = TimeUnit.MINUTES.toMillis(10)
-            AlarmManagerCompat.setExactAndAllowWhileIdle(
-                alarmManager,
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + delay,
-                pendingReceiverFor<RestartReceiver>()
-            )
-        }
-    }
-
-    override fun cancelAlarm() {
-        cancelAlarm<RestartReceiver>()
     }
 
     override fun onChanged(hasPause: Boolean) {
@@ -99,15 +58,10 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
     }
 
     override fun onDestroy() {
-        saveProgress()
+        holder.saveProgress()
         playbackChanges.removeFreshObserver(this)
-        job.cancelChildren()
         player.release()
         super.onDestroy()
-    }
-
-    override val coroutineContext = Dispatchers.Main + job + CoroutineExceptionHandler { _, e ->
-        Timber.e(e)
     }
 
     companion object {

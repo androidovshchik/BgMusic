@@ -17,7 +17,7 @@ class MusicWorker(context: Context, params: WorkerParameters) : Worker(context, 
 
     override fun doWork(): Result {
         try {
-            player.preparePlaylist(preferences.track, preferences.position)
+            player.preparePlaylist()
             player.startPlay()
             playbackChanges.observeForeverFreshly(this)
             Thread.sleep(TimeUnit.MINUTES.toMillis(10))
