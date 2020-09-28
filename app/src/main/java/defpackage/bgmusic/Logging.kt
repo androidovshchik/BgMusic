@@ -1,9 +1,15 @@
 package defpackage.bgmusic
 
 import android.os.Bundle
+import com.elvishew.xlog.LogConfiguration
 import com.elvishew.xlog.XLog
+import com.elvishew.xlog.flattener.PatternFlattener
+import com.elvishew.xlog.printer.file.FilePrinter
+import com.elvishew.xlog.printer.file.backup.NeverBackupStrategy
+import com.elvishew.xlog.printer.file.naming.DateFileNameGenerator
 import okhttp3.logging.HttpLoggingInterceptor
 import timber.log.Timber
+import java.io.File
 import java.util.*
 
 class LogInterceptor : HttpLoggingInterceptor.Logger {
@@ -13,7 +19,24 @@ class LogInterceptor : HttpLoggingInterceptor.Logger {
     }
 }
 
-class LogTree : Timber.DebugTree() {
+class LogTree(logDir: File) : Timber.DebugTree() {
+
+    init {
+        if (BuildConfig.SAVE_LOGS) {
+            if (!logDir.exists()) {
+                logDir.mkdirs()
+            }
+            val config = LogConfiguration.Builder()
+                .t()
+                .build()
+            val filePrinter = FilePrinter.Builder(logDir.path)
+                .fileNameGenerator(DateFileNameGenerator())
+                .backupStrategy(NeverBackupStrategy())
+                .flattener(PatternFlattener("{d yyyy-MM-dd HH:mm:ss.SSS} {l}: {m}"))
+                .build()
+            XLog.init(config, filePrinter)
+        }
+    }
 
     override fun createStackElementTag(element: StackTraceElement): String {
         return "${super.createStackElementTag(element)}:${element.methodName}:${element.lineNumber}"

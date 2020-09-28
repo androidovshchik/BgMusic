@@ -54,6 +54,7 @@ class MusicService : Service(), CoroutineScope, IHolder, Observer<Boolean> {
                 .setSound(null)
                 .build()
         )
+        Timber.d("Starting foreground service")
         player.preparePlaylist(preferences.track, preferences.position)
         player.startPlay()
         playbackChanges.observeForeverFreshly(this)

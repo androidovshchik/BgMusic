@@ -9,13 +9,14 @@ import defpackage.bgmusic.extension.isOreoPlus
 import defpackage.bgmusic.player.ServiceRunnable
 import org.jetbrains.anko.notificationManager
 import timber.log.Timber
+import java.io.File
 
 @Suppress("unused")
 class MainApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Timber.plant(LogTree())
+        Timber.plant(LogTree(File(getExternalFilesDir(null), "logs")))
         if (isOreoPlus()) {
             notificationManager.createNotificationChannel(
                 NotificationChannel("main", "Main", NotificationManager.IMPORTANCE_DEFAULT)
