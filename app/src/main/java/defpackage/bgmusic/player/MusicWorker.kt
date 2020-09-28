@@ -44,9 +44,11 @@ class MusicWorker(context: Context, params: WorkerParameters) : Worker(context, 
     }
 
     override fun onStopped() {
-        holder.saveProgress(player.track, player.position)
-        playbackChanges.removeFreshObserver(this)
-        player.release()
+        runBlocking(Dispatchers.Main) {
+            holder.saveProgress(player.track, player.position)
+            playbackChanges.removeFreshObserver(this@MusicWorker)
+            player.release()
+        }
     }
 
     companion object {
