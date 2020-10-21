@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Observer
@@ -98,8 +99,7 @@ class ServiceRunnable(context: Context) : Runnable {
 
     private val reference = WeakReference(context)
 
-    @Suppress("DEPRECATION")
-    private val handler = Handler()
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun run() {
         try {

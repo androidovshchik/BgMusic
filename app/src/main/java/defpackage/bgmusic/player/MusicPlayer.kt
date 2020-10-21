@@ -6,6 +6,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
+import android.os.Looper
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -74,7 +75,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
     private val audioManager = context.audioManager
 
     @Suppress("DEPRECATION")
-    private val focusHandler = Handler()
+    private val focusHandler = Handler(Looper.getMainLooper())
     private val focusRequest by lazy {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -135,6 +136,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         player.prepare()
     }
 
+    @Synchronized
     override fun startPlay() {
         if (isReady) {
             Timber.w("Skipping start playing")
@@ -172,6 +174,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         )
     }
 
+    @Synchronized
     override fun onAudioFocusChange(focusChange: Int) {
         Timber.d("Changed focus: %d", focusChange)
         when (focusChange) {
@@ -209,6 +212,7 @@ class MusicPlayer(holder: IHolder, context: Context) : IPlayer {
         player.playWhenReady = false
     }
 
+    @Synchronized
     override fun stopPlay() {
         pausePlay()
         val result = if (isOreoPlus()) {
